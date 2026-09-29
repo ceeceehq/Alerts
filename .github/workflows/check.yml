@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "*/10 * * * *"  # GitHub may run this a few minutes late
   workflow_dispatch:
+    inputs:
+      test_email:
+        description: "Send a test email with the newest listing"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -16,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python ths_alert.py
+      - run: python ths_alert.py ${{ inputs.test_email && '--test-email' || '' }}
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}

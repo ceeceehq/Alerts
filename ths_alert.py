@@ -3,6 +3,7 @@
 
 Fetches the search results, compares listing IDs against seen.json, and emails
 any new ones via SMTP. The first run only records what's already there.
+--test-email sends the newest listing as a sample alert without touching seen.json.
 
 Env vars:
   SMTP_USER      Gmail address that sends the email
@@ -137,6 +138,12 @@ def send_email(subject, text, body):
 def main():
     dry_run = "--dry-run" in sys.argv
     listings = fetch_all()
+
+    if "--test-email" in sys.argv:
+        subject, text, body = build_email(listings[:1])
+        send_email(f"[TEST] {subject}", text, body)
+        print(f"sent test email: {subject}")
+        return
     first_run = not SEEN_FILE.exists()
     seen = set() if first_run else set(json.loads(SEEN_FILE.read_text()))
     new = [l for l in listings if l["id"] not in seen]
