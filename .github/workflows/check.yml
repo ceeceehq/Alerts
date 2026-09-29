@@ -2,7 +2,7 @@ name: Check TrustedHouseSitters
 
 on:
   schedule:
-    - cron: "*/15 * * * *"  # GitHub may run this a few minutes late
+    - cron: "*/10 * * * *"  # GitHub may run this a few minutes late
   workflow_dispatch:
 
 permissions:
