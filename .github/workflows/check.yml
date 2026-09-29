@@ -1,8 +1,11 @@
 name: Check TrustedHouseSitters
 
+# GitHub starts scheduled runs 10-20 minutes apart in practice, so each run
+# checks every 3 minutes for ~25 minutes. The concurrency group queues the next
+# run behind the current one, which keeps the checks roughly continuous.
 on:
   schedule:
-    - cron: "*/5 * * * *"  # GitHub may run this a few minutes late
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       test_email:
@@ -13,22 +16,46 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ths-check
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      ALERT_TO: ${{ secrets.ALERT_TO }}
+      CHECKS: 9          # checks per run
+      INTERVAL: 180      # seconds between checks
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python ths_alert.py ${{ inputs.test_email && '--test-email' || '' }}
-        env:
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          ALERT_TO: ${{ secrets.ALERT_TO }}
-      - name: Save seen listings
+
+      - name: Send test email
+        if: inputs.test_email
+        run: python ths_alert.py --test-email
+
+      - name: Check for new sits
+        if: ${{ !inputs.test_email }}
         run: |
           git config user.name "ths-alert-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add seen.json
-          git diff --cached --quiet || (git commit -m "Update seen listings" && git push)
+          failed=0
+          for i in $(seq 1 "$CHECKS"); do
+            echo "::group::Check $i/$CHECKS ($(date -u +%H:%M:%S) UTC)"
+            python ths_alert.py || { echo "::warning::Check $i failed"; failed=1; }
+            # Save after every check so a later failure can't cause repeat emails
+            git add seen.json
+            if ! git diff --cached --quiet; then
+              git commit -q -m "Update seen listings"
+              git pull -q --rebase && git push -q || { echo "::warning::Push failed"; failed=1; }
+            fi
+            echo "::endgroup::"
+            [ "$i" -lt "$CHECKS" ] && sleep "$INTERVAL"
+          done
+          exit $failed
