@@ -49,8 +49,9 @@ jobs:
           for i in $(seq 1 "$CHECKS"); do
             echo "::group::Check $i/$CHECKS ($(date -u +%H:%M:%S) UTC)"
             python ths_alert.py || { echo "::warning::Check $i failed"; failed=1; }
+            python watch_listing.py || { echo "::warning::Watch $i failed"; failed=1; }
             # Save after every check so a later failure can't cause repeat emails
-            git add seen.json
+            git add seen.json watched.json
             if ! git diff --cached --quiet; then
               git commit -q -m "Update seen listings"
               git pull -q --rebase && git push -q || { echo "::warning::Push failed"; failed=1; }
