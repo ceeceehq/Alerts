@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Email me which UK fruit and vegetables are in season this fortnight.
+"""Email me which fruit and vegetables are in season this fortnight.
+
+--region picks the list: "uk" (default) or "malmo" (Skåne, southern Sweden).
 
 Runs on the 1st and 15th. Each season is given in half-months: "5a" is early May
 (1st-14th), "7b" is late July (15th-end). Seasons can wrap past New Year ("10a"
@@ -8,8 +10,9 @@ ends this half-month is called out as "just in" or "last chance".
 --dry-run prints the email instead of sending it. --date YYYY-MM-DD pretends
 it's that day.
 
-Illustrations live in img/ (one <slug>.png per item, one header-<season>.jpg
-per season) and are loaded from GitHub, so a new item needs its icon pushed.
+Illustrations live in img/ (one <slug>.png per item, named after the English
+name, and headers/<region>-<half-month>.jpg per fortnight) and are loaded from
+GitHub, so a new item needs its icon pushed.
 
 Email settings come from env vars; see mailer.py.
 """
@@ -83,7 +86,63 @@ VEG = {
     "Chicory": ("11a", "3a"),
 }
 
-# How to pick a good one
+# Skåne (Malmö) seasons, same half-month codes as the UK lists. Names carry the
+# Swedish word you'll see at the market. Root veg and apples run on
+# into winter and spring from storage.
+MALMO_FRUIT = {
+    "Rhubarb (rabarber)": ("5a", "7a"),
+    "Elderflower (fläder)": ("6a", "7a"),
+    "Strawberries (jordgubbar)": ("6b", "8a"),
+    "Cherries (körsbär)": ("7a", "8a"),
+    "Gooseberries (krusbär)": ("7a", "8a"),
+    "Redcurrants (röda vinbär)": ("7a", "8b"),
+    "Raspberries (hallon)": ("7a", "9a"),
+    "Blackcurrants (svarta vinbär)": ("7b", "8b"),
+    "Bilberries (blåbär)": ("7b", "9a"),
+    "Cloudberries (hjortron)": ("7b", "8b"),
+    "Blackberries (björnbär)": ("8b", "9b"),
+    "Plums (plommon)": ("8b", "9b"),
+    "Lingonberries (lingon)": ("8b", "10a"),
+    "Sea buckthorn (havtorn)": ("8b", "10a"),
+    "Apples (äpplen)": ("8b", "2b"),
+    "Elderberries (fläderbär)": ("9a", "9b"),
+    "Pears (päron)": ("9a", "10b"),
+    "Rosehips (nypon)": ("9a", "10b"),
+}
+
+MALMO_VEG = {
+    "Wild garlic (ramslök)": ("4a", "5a"),
+    "Nettles (nässlor)": ("4a", "5b"),
+    "Chives (gräslök)": ("4b", "9a"),
+    "Asparagus (sparris)": ("5a", "6b"),
+    "Radishes (rädisor)": ("5b", "9a"),
+    "Spinach (spenat)": ("5b", "9b"),
+    "New potatoes (färskpotatis)": ("6a", "8a"),
+    "Lettuce (sallad)": ("6a", "9b"),
+    "Dill": ("6b", "8b"),
+    "Cucumbers (gurka)": ("6b", "9a"),
+    "Peas (ärtor)": ("7a", "8b"),
+    "Carrots (morötter)": ("7a", "4b"),
+    "Beetroot (rödbetor)": ("7b", "3b"),
+    "Courgettes (squash)": ("7b", "9b"),
+    "Cauliflower (blomkål)": ("7b", "10a"),
+    "Broccoli": ("7b", "10a"),
+    "Chanterelles (kantareller)": ("7b", "10a"),
+    "White cabbage (vitkål)": ("8a", "12b"),
+    "Sweetcorn (majs)": ("8b", "9b"),
+    "Porcini (Karl Johan)": ("8b", "10a"),
+    "Leeks (purjolök)": ("8b", "12b"),
+    "Squash and pumpkins (pumpa)": ("9a", "11a"),
+    "Red cabbage (rödkål)": ("9a", "1b"),
+    "Swede (kålrot)": ("9b", "3b"),
+    "Parsnips (palsternacka)": ("9b", "4a"),
+    "Celeriac (rotselleri)": ("9b", "3b"),
+    "Kale (grönkål)": ("10a", "2b"),
+    "Brussels sprouts (brysselkål)": ("10a", "1a"),
+    "Jerusalem artichokes (jordärtskocka)": ("10a", "4b"),
+}
+
+# How to pick a good one, keyed by English name
 TIPS = {
     "Forced rhubarb": "Look for slender, bright pink stalks that snap cleanly; skip any that are limp or bendy.",
     "Rhubarb": "Choose firm, glossy stalks with fresh-looking cut ends. Thinner stalks are more tender.",
@@ -142,7 +201,28 @@ TIPS = {
     "Brussels sprouts": "Small, tight, bright green sprouts. Buy them on the stalk if you can, as they keep longer.",
     "Jerusalem artichokes": "Firm, with as few knobbles as possible, so they're easier to peel.",
     "Chicory": "Tight, pale heads with yellow tips. Green tips mean extra bitterness.",
+    "Bilberries": "Wild bilberries stain blue right through, unlike cultivated blueberries; pick plump, dusty-blue ones.",
+    "Cloudberries": "Golden-orange and soft means ripe; red ones are still sour. Pricey, so check the punnet for mush.",
+    "Lingonberries": "Deep red all over and firm. Tart, so they're usually stirred with sugar into rårörda lingon.",
+    "Sea buckthorn": "Bright orange and juicy; the berries burst easily, so freeze the branch and shake them off.",
+    "Rosehips": "Deep red and slightly soft after the first frost; scrape out the itchy seeds before use.",
+    "Nettles": "Pick only the top four leaves of young plants, with gloves, before they flower.",
+    "Chives": "Bright, upright stalks with no yellowing. The purple flowers are edible too.",
+    "Dill": "Feathery, bright green fronds for cooking; tall dill crowns with yellow flowers are for crayfish and pickling.",
+    "Cauliflower": "Tight, creamy-white curds and fresh green leaves wrapped around them; no brown spots.",
+    "Chanterelles": "Firm, dry and apricot-scented with ridges, not gills. Buy from a trusted seller unless an expert has checked yours.",
+    "Porcini": "Firm caps and stems with no holes; small ones are best. Same rule: only buy from a trusted seller.",
+    "White cabbage": "Heavy and tight, with crisp, squeaky leaves.",
+    "Lettuce": "Crisp and perky with no brown edges. Heads should feel heavy for their size.",
 }
+
+# Malmö items whose icon and tip go by a different English name
+ALIASES = {"Bilberries": "Blueberries", "Lettuce": "Lettuce and salad leaves"}
+
+
+def english(name):
+    """'Kale (grönkål)' -> 'Kale'"""
+    return name.split(" (")[0]
 
 
 def half_index(code):
@@ -175,36 +255,50 @@ def pick_tips(sections, i, limit=6):
              for kind in KINDS}
     rest = kinds["In season"] + kinds["Last chance"]
     rest = rest[i % len(rest):] + rest[:i % len(rest)] if rest else []
-    return [(name, TIPS[name]) for name in (kinds["Just in"] + rest)[:limit]]
+    return [(name, TIPS[english(name)]) for name in (kinds["Just in"] + rest)[:limit]]
 
 
-def build_email(today):
+REGIONS = {
+    "uk": {
+        "fruit": FRUIT, "veg": VEG, "subject": "In season", "title": "UK seasonal produce",
+        "footer": "Rough dates for UK field-grown produce.",
+    },
+    "malmo": {
+        "fruit": MALMO_FRUIT, "veg": MALMO_VEG, "subject": "In season in Malmö", "title": "Malmö seasonal produce",
+        "footer": "Rough dates for produce grown in Skåne. Allemansrätten lets you pick wild berries "
+                  "and mushrooms in most countryside, but not in gardens or nature reserves.",
+    },
+}
+
+
+def build_email(today, region="uk"):
+    r = REGIONS[region]
     i = (today.month - 1) * 2 + (today.day >= 15)
     period = f"{'Early' if today.day < 15 else 'Late'} {today:%B}"
     sections = []
-    for label, produce in (("Fruit", FRUIT), ("Veg", VEG)):
+    for label, produce in (("Fruit", r["fruit"]), ("Veg", r["veg"])):
         new, now, ending = group(produce, i)
         sections.append((label, [("Just in", new), ("In season", now), ("Last chance", ending)]))
     tips = pick_tips(sections, i)
-    season = SEASONS[today.month]
+    header = f"{region}-{today.month}{'ab'[today.day >= 15]}"
 
     next_update = (today.replace(day=15) if today.day < 15
                    else date(today.year + today.month // 12, today.month % 12 + 1, 1))
-    subject = f"In season: {period}"
+    subject = f"{r['subject']}: {period}"
     text = "\n\n".join(
-        f"{label.upper()}\n" + "\n".join(f"{kind}: {', '.join(items)}" for kind, items in parts if items)
+        f"{label.upper()}\n" + ("\n".join(f"{kind}: {', '.join(items)}" for kind, items in parts if items)
+                                 or NOTHING)
         for label, parts in sections)
     text += "\n\nHOW TO PICK THE BEST\n" + "\n".join(f"{name}: {tip}" for name, tip in tips)
     text += f"\n\nNext update: {next_update:%-d %B}"
-    return subject, text, render_html(period, season, sections, tips, next_update)
+    return subject, text, render_html(r, period, header, sections, tips, next_update)
 
 
 # Email clients ignore <style> blocks and most layout CSS, so everything is
 # inline styles on tables. Images are served from the public GitHub repo.
 FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
 IMG = "https://raw.githubusercontent.com/ceeceehq/Alerts/main/img"
-SEASONS = {m: s for s, months in (("winter", (12, 1, 2)), ("spring", (3, 4, 5)),
-                                  ("summer", (6, 7, 8)), ("autumn", (9, 10, 11))) for m in months}
+NOTHING = "Nothing grown locally right now."
 ICONS = {"Fruit": "🍎", "Veg": "🥕"}
 # kind -> (chip background, chip text, note next to the heading)
 KINDS = {
@@ -215,7 +309,8 @@ KINDS = {
 
 
 def icon(name, size):
-    slug = re.sub(r"[^a-z]+", "-", name.lower()).strip("-")
+    name = english(name)
+    slug = re.sub(r"[^a-z]+", "-", ALIASES.get(name, name).lower()).strip("-")
     return (f'<img src="{IMG}/{slug}.png" width="{size}" height="{size}" alt="" '
             f'style="display:inline-block;vertical-align:middle;border:0">')
 
@@ -248,6 +343,7 @@ def produce_card(label, parts):
                  + (f'<span style="text-transform:none;letter-spacing:0;font-weight:400"> · {note}</span>'
                     if note else "")
                  + f'</p><div>{chips(kind, items)}</div>')
+    rows = rows or f'<p style="margin:12px 0 10px;font-size:14px;color:#77736a">{NOTHING}</p>'
     return card(f"{ICONS[label]}&nbsp; {label}", rows)
 
 
@@ -262,19 +358,19 @@ def tips_card(tips):
                 f'style="margin:0 0 10px">{rows}</table>')
 
 
-def render_html(period, season, sections, tips, next_update):
+def render_html(r, period, header, sections, tips, next_update):
     return (f'<div style="margin:0;padding:24px 12px;background:#f7f5f0;font-family:{FONT}">'
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
             f'style="max-width:560px;margin:0 auto">'
-            f'<tr><td style="padding:0 0 6px"><img src="{IMG}/header-{season}.jpg" width="560" alt="" '
+            f'<tr><td style="padding:0 0 6px"><img src="{IMG}/headers/{header}.jpg" width="560" alt="" '
             f'style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px"></td></tr>'
             f'<tr><td style="padding:0 4px 18px">'
-            f'<p style="margin:0;font-size:13px;color:#77736a">UK seasonal produce</p>'
-            f'<h1 style="margin:2px 0 0;font-size:26px;color:#26241f">In season: {period}</h1></td></tr>'
+            f'<p style="margin:0;font-size:13px;color:#77736a">{r["title"]}</p>'
+            f'<h1 style="margin:2px 0 0;font-size:26px;color:#26241f">{r["subject"]}: {period}</h1></td></tr>'
             + "".join(produce_card(label, parts) for label, parts in sections)
             + tips_card(tips)
             + f'<tr><td style="padding:4px 4px 0;font-size:12px;color:#8f8a80">'
-            f'Rough dates for UK field-grown produce. Next update: {next_update:%-d %B}.</td></tr>'
+            f'{r["footer"]} Next update: {next_update:%-d %B}.</td></tr>'
             f'</table></div>')
 
 
@@ -282,7 +378,8 @@ def main():
     today = date.today()
     if "--date" in sys.argv:
         today = date.fromisoformat(sys.argv[sys.argv.index("--date") + 1])
-    subject, text, body = build_email(today)
+    region = sys.argv[sys.argv.index("--region") + 1] if "--region" in sys.argv else "uk"
+    subject, text, body = build_email(today, region)
     if "--dry-run" in sys.argv:
         print(subject, text, sep="\n\n")
         return
