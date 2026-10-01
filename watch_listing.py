@@ -18,7 +18,6 @@ from ths_alert import BASE, UA, send_email
 
 # listing id -> note for the email subject
 WATCH = {
-    "2403708": "London flat, 1-6 Nov",
 }
 STATE_FILE = Path(__file__).with_name("watched.json")
 STATE_RE = re.compile(r'<script id="__INITIAL_STATE__" type="application/json">(.*?)</script>', re.S)
