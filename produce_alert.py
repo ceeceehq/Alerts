@@ -271,16 +271,20 @@ REGIONS = {
 }
 
 
+def period_name(today):
+    return f"{'Early' if today.day < 15 else 'Late'} {today:%B}"
+
+
 def build_email(today, region="uk"):
     r = REGIONS[region]
     i = (today.month - 1) * 2 + (today.day >= 15)
-    period = f"{'Early' if today.day < 15 else 'Late'} {today:%B}"
+    period = period_name(today)
     sections = []
     for label, produce in (("Fruit", r["fruit"]), ("Veg", r["veg"])):
         new, now, ending = group(produce, i)
         sections.append((label, [("Just in", new), ("In season", now), ("Last chance", ending)]))
     tips = pick_tips(sections, i)
-    header = f"{region}-{today.month}{'ab'[today.day >= 15]}"
+    half = f"{region}-{today.month}{'ab'[today.day >= 15]}"
 
     next_update = (today.replace(day=15) if today.day < 15
                    else date(today.year + today.month // 12, today.month % 12 + 1, 1))
@@ -291,12 +295,15 @@ def build_email(today, region="uk"):
         for label, parts in sections)
     text += "\n\nHOW TO PICK THE BEST\n" + "\n".join(f"{name}: {tip}" for name, tip in tips)
     text += f"\n\nNext update: {next_update:%-d %B}"
-    return subject, text, render_html(r, period, header, sections, tips, next_update)
+    return subject, text, render_html(r, period, half, sections, tips, next_update)
 
 
 # Email clients ignore <style> blocks and most layout CSS, so everything is
 # inline styles on tables. Images are served from the public GitHub repo.
+# The title is an image (tools/make_titles.py) because Gmail ignores web fonts;
+# card headings fall back to Georgia where Fraunces isn't installed
 FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
+SERIF = "Fraunces,Georgia,'Times New Roman',serif"
 IMG = "https://raw.githubusercontent.com/ceeceehq/Alerts/main/img"
 NOTHING = "Nothing grown locally right now."
 ICONS = {"Fruit": "🍎", "Veg": "🥕"}
@@ -328,7 +335,8 @@ def card(title, inner):
     return (f'<tr><td style="padding:0 0 16px"><table role="presentation" width="100%" cellpadding="0" '
             f'cellspacing="0" style="background:#ffffff;border:1px solid #e7e3da;border-radius:12px">'
             f'<tr><td style="padding:18px 20px 10px">'
-            f'<h2 style="margin:0;font-size:18px;color:#26241f">{title}</h2>{inner}'
+            f'<h2 style="margin:0;font-family:{SERIF};font-style:italic;font-weight:500;font-size:21px;'
+            f'color:#26241f">{title}</h2>{inner}'
             f'</td></tr></table></td></tr>')
 
 
@@ -358,15 +366,18 @@ def tips_card(tips):
                 f'style="margin:0 0 10px">{rows}</table>')
 
 
-def render_html(r, period, header, sections, tips, next_update):
+def render_html(r, period, half, sections, tips, next_update):
     return (f'<div style="margin:0;padding:24px 12px;background:#f7f5f0;font-family:{FONT}">'
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
             f'style="max-width:560px;margin:0 auto">'
-            f'<tr><td style="padding:0 0 6px"><img src="{IMG}/headers/{header}.jpg" width="560" alt="" '
+            f'<tr><td style="padding:0 0 6px"><img src="{IMG}/headers/{half}.jpg" width="560" alt="" '
             f'style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px"></td></tr>'
-            f'<tr><td style="padding:0 4px 18px">'
-            f'<p style="margin:0;font-size:13px;color:#77736a">{r["title"]}</p>'
-            f'<h1 style="margin:2px 0 0;font-size:26px;color:#26241f">{r["subject"]}: {period}</h1></td></tr>'
+            f'<tr><td style="padding:6px 0 18px">'
+            f'<p style="margin:0 4px 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;'
+            f'color:#8f8a80">{r["title"]}</p>'
+            f'<img src="{IMG}/titles/{half}.png" width="560" alt="{html.escape(r["subject"])}: {period}" '
+            f'style="display:block;width:100%;max-width:560px;height:auto;border:0;font-family:{SERIF};'
+            f'font-style:italic;font-size:30px;color:#26241f"></td></tr>'
             + "".join(produce_card(label, parts) for label, parts in sections)
             + tips_card(tips)
             + f'<tr><td style="padding:4px 4px 0;font-size:12px;color:#8f8a80">'
